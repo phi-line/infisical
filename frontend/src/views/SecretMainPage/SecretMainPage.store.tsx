@@ -7,7 +7,7 @@ import { SecretV3RawSanitized } from "@app/hooks/api/secrets/types";
 // akhilmhdh: Don't remove this file if ur thinking why use zustand just for selected selects state
 // This is first step and the whole secret crud will be moved to this global page scope state
 // this will allow more stuff like undo grouping stuffs etc
-type SelectedSecretState = {
+type SelectedConsumerSecretState = {
   selectedSecret: Record<string, SecretV3RawSanitized>;
   action: {
     toggle: (secret: SecretV3RawSanitized) => void;
@@ -15,7 +15,9 @@ type SelectedSecretState = {
     set: (secrets: Record<string, SecretV3RawSanitized>) => void;
   };
 };
-const createSelectedSecretStore: StateCreator<SelectedSecretState> = (set) => ({
+const createSelectedSecretStore: StateCreator<SelectedConsumerSecretState> = (
+  set,
+) => ({
   selectedSecret: {},
   action: {
     toggle: (secret) =>
@@ -28,12 +30,12 @@ const createSelectedSecretStore: StateCreator<SelectedSecretState> = (set) => ({
         return { selectedSecret: newChecks };
       }),
     reset: () => set({ selectedSecret: {} }),
-    set: (secrets) => set({ selectedSecret: secrets })
-  }
+    set: (secrets) => set({ selectedSecret: secrets }),
+  },
 });
 
 export enum PopUpNames {
-  CreateSecretForm = "create-secret-form"
+  CreateSecretForm = "create-secret-form",
 }
 
 type PopUpState = {
@@ -47,17 +49,23 @@ type PopUpState = {
 const createPopUpStore: StateCreator<PopUpState> = (set) => ({
   popUp: {},
   popUpActions: {
-    closePopUp: (id) => set((state) => ({ popUp: { ...state.popUp, [id]: { isOpen: false } } })),
+    closePopUp: (id) =>
+      set((state) => ({ popUp: { ...state.popUp, [id]: { isOpen: false } } })),
     openPopUp: (id, data) =>
-      set((state) => ({ popUp: { ...state.popUp, [id]: { isOpen: true, data } } })),
+      set((state) => ({
+        popUp: { ...state.popUp, [id]: { isOpen: true, data } },
+      })),
     togglePopUp: (id, isOpen) =>
       set((state) => ({
-        popUp: { ...state.popUp, [id]: { isOpen: isOpen ?? !state.popUp[id].isOpen } }
-      }))
-  }
+        popUp: {
+          ...state.popUp,
+          [id]: { isOpen: isOpen ?? !state.popUp[id].isOpen },
+        },
+      })),
+  },
 });
 
-type CombinedState = SelectedSecretState & PopUpState;
+type CombinedState = SelectedConsumerSecretState & PopUpState;
 const StoreContext = createContext<StoreApi<CombinedState> | null>(null);
 export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const storeRef = useRef<StoreApi<CombinedState>>();
@@ -65,7 +73,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   if (!storeRef.current) {
     storeRef.current = createStore<CombinedState>((...a) => ({
       ...createSelectedSecretStore(...a),
-      ...createPopUpStore(...a)
+      ...createPopUpStore(...a),
     }));
   }
 
@@ -81,20 +89,29 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  return <StoreContext.Provider value={storeRef.current}>{children}</StoreContext.Provider>;
+  return (
+    <StoreContext.Provider value={storeRef.current}>
+      {children}
+    </StoreContext.Provider>
+  );
 };
 
-const useStoreContext = <T extends unknown>(selector: (state: CombinedState) => T): T => {
+const useStoreContext = <T extends unknown>(
+  selector: (state: CombinedState) => T,
+): T => {
   const ctx = useContext(StoreContext);
   if (!ctx) throw new Error("Missing ");
   return useStore(ctx, selector);
 };
 
 // selected secret context
-export const useSelectedSecrets = () => useStoreContext((state) => state.selectedSecret);
-export const useSelectedSecretActions = () => useStoreContext((state) => state.action);
+export const useSelectedSecrets = () =>
+  useStoreContext((state) => state.selectedSecret);
+export const useSelectedSecretActions = () =>
+  useStoreContext((state) => state.action);
 
 // popup context
 export const usePopUpState = (id: PopUpNames) =>
   useStoreContext((state) => state.popUp?.[id] || { isOpen: false });
-export const usePopUpAction = () => useStoreContext((state) => state.popUpActions);
+export const usePopUpAction = () =>
+  useStoreContext((state) => state.popUpActions);

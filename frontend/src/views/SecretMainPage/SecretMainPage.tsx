@@ -9,21 +9,31 @@ import { twMerge } from "tailwind-merge";
 import NavHeader from "@app/components/navigation/NavHeader";
 import { createNotification } from "@app/components/notifications";
 import { PermissionDeniedBanner } from "@app/components/permissions";
-import { Checkbox, ContentLoader, Pagination, Tooltip } from "@app/components/v2";
+import {
+  Checkbox,
+  ContentLoader,
+  Pagination,
+  Tooltip,
+} from "@app/components/v2";
 import {
   ProjectPermissionActions,
   ProjectPermissionDynamicSecretActions,
   ProjectPermissionSub,
   useProjectPermission,
-  useWorkspace
+  useWorkspace,
 } from "@app/context";
-import { useDebounce, usePagination, usePopUp, useResetPageHelper } from "@app/hooks";
+import {
+  useDebounce,
+  usePagination,
+  usePopUp,
+  useResetPageHelper,
+} from "@app/hooks";
 import {
   useGetImportedSecretsSingleEnv,
   useGetSecretApprovalPolicyOfABoard,
   useGetWorkspaceSnapshotList,
   useGetWsSnapshotCount,
-  useGetWsTags
+  useGetWsTags,
 } from "@app/hooks/api";
 import { useGetProjectSecretsDetails } from "@app/hooks/api/dashboard";
 import { DashboardSecretsOrderBy } from "@app/hooks/api/dashboard/types";
@@ -38,22 +48,25 @@ import { ActionBar } from "./components/ActionBar";
 import { CreateSecretForm } from "./components/CreateSecretForm";
 import { PitDrawer } from "./components/PitDrawer";
 import { SecretDropzone } from "./components/SecretDropzone";
-import { SecretListView, SecretNoAccessListView } from "./components/SecretListView";
+import {
+  SecretListView,
+  SecretNoAccessListView,
+} from "./components/SecretListView";
 import { SnapshotView } from "./components/SnapshotView";
 import {
   StoreProvider,
   useSelectedSecretActions,
-  useSelectedSecrets
+  useSelectedSecrets,
 } from "./SecretMainPage.store";
 import { Filter, RowType } from "./SecretMainPage.types";
 
 const LOADER_TEXT = [
   "Retrieving your encrypted secrets...",
   "Fetching folders...",
-  "Getting secret import links..."
+  "Getting secret import links...",
 ];
 
-const SecretMainPageContent = () => {
+const ConsumerSecretMainPageContent = () => {
   const { t } = useTranslation();
   const { currentWorkspace, isLoading: isWorkspaceLoading } = useWorkspace();
   const router = useRouter();
@@ -70,12 +83,14 @@ const SecretMainPageContent = () => {
     perPage,
     page,
     setPerPage,
-    orderBy
+    orderBy,
   } = usePagination<DashboardSecretsOrderBy>(DashboardSecretsOrderBy.Name);
 
   const [snapshotId, setSnapshotId] = useState<string | null>(null);
   const isRollbackMode = Boolean(snapshotId);
-  const { popUp, handlePopUpClose, handlePopUpToggle } = usePopUp(["snapshots"] as const);
+  const { popUp, handlePopUpClose, handlePopUpToggle } = usePopUp([
+    "snapshots",
+  ] as const);
 
   // env slug
   const environment = router.query.env as string;
@@ -88,23 +103,23 @@ const SecretMainPageContent = () => {
       environment,
       secretPath,
       secretName: "*",
-      secretTags: ["*"]
-    })
+      secretTags: ["*"],
+    }),
   );
 
   const canReadSecretImports = permission.can(
     ProjectPermissionActions.Read,
-    subject(ProjectPermissionSub.SecretImports, { environment, secretPath })
+    subject(ProjectPermissionSub.SecretImports, { environment, secretPath }),
   );
 
   const canReadDynamicSecret = permission.can(
     ProjectPermissionDynamicSecretActions.ReadRootCredential,
-    subject(ProjectPermissionSub.DynamicSecrets, { environment, secretPath })
+    subject(ProjectPermissionSub.DynamicSecrets, { environment, secretPath }),
   );
 
   const canDoReadRollback = permission.can(
     ProjectPermissionActions.Read,
-    ProjectPermissionSub.SecretRollback
+    ProjectPermissionSub.SecretRollback,
   );
 
   const defaultFilterState = {
@@ -115,13 +130,17 @@ const SecretMainPageContent = () => {
       [RowType.Folder]: true,
       [RowType.Import]: true,
       [RowType.DynamicSecret]: true,
-      [RowType.Secret]: true
-    }
+      [RowType.Secret]: true,
+    },
   };
 
   const [filter, setFilter] = useState<Filter>(defaultFilterState);
-  const [debouncedSearchFilter, setDebouncedSearchFilter] = useDebounce(filter.searchFilter);
-  const [filterHistory, setFilterHistory] = useState<Map<string, Filter>>(new Map());
+  const [debouncedSearchFilter, setDebouncedSearchFilter] = useDebounce(
+    filter.searchFilter,
+  );
+  const [filterHistory, setFilterHistory] = useState<Map<string, Filter>>(
+    new Map(),
+  );
 
   useEffect(() => {
     if (
@@ -132,7 +151,7 @@ const SecretMainPageContent = () => {
       router.push(`/project/${workspaceId}/secrets/overview`);
       createNotification({
         text: "No environment found with given slug",
-        type: "error"
+        type: "error",
       });
     }
   }, [isWorkspaceLoading, currentWorkspace, environment, router.isReady]);
@@ -140,7 +159,7 @@ const SecretMainPageContent = () => {
   const {
     data,
     isLoading: isDetailsLoading,
-    isFetching: isDetailsFetching
+    isFetching: isDetailsFetching,
   } = useGetProjectSecretsDetails({
     environment,
     projectId: workspaceId,
@@ -154,7 +173,7 @@ const SecretMainPageContent = () => {
     includeFolders: filter.include.folder,
     includeDynamicSecrets: canReadDynamicSecret && filter.include.dynamic,
     includeSecrets: canReadSecret && filter.include.secret,
-    tags: filter.tags
+    tags: filter.tags,
   });
 
   const {
@@ -166,13 +185,13 @@ const SecretMainPageContent = () => {
     totalFolderCount = 0,
     totalDynamicSecretCount = 0,
     totalSecretCount = 0,
-    totalCount = 0
+    totalCount = 0,
   } = data ?? {};
 
   useResetPageHelper({
     totalCount,
     offset,
-    setPage
+    setPage,
   });
 
   // fetch imported secrets to show user the overriden ones
@@ -181,19 +200,21 @@ const SecretMainPageContent = () => {
     environment,
     path: secretPath,
     options: {
-      enabled: canReadSecret
-    }
+      enabled: canReadSecret,
+    },
   });
 
   // fetch tags
   const { data: tags } = useGetWsTags(
-    permission.can(ProjectPermissionActions.Read, ProjectPermissionSub.Tags) ? workspaceId : ""
+    permission.can(ProjectPermissionActions.Read, ProjectPermissionSub.Tags)
+      ? workspaceId
+      : "",
   );
 
   const { data: boardPolicy } = useGetSecretApprovalPolicyOfABoard({
     workspaceId,
     environment,
-    secretPath
+    secretPath,
   });
   const isProtectedBranch = Boolean(boardPolicy);
 
@@ -201,21 +222,22 @@ const SecretMainPageContent = () => {
     data: snapshotList,
     isFetchingNextPage: isFetchingNextSnapshotList,
     fetchNextPage: fetchNextSnapshotList,
-    hasNextPage: hasNextSnapshotListPage
+    hasNextPage: hasNextSnapshotListPage,
   } = useGetWorkspaceSnapshotList({
     workspaceId,
     directory: secretPath,
     environment,
     isPaused: !popUp.snapshots.isOpen || !canDoReadRollback,
-    limit: 10
+    limit: 10,
   });
 
-  const { data: snapshotCount, isLoading: isSnapshotCountLoading } = useGetWsSnapshotCount({
-    workspaceId,
-    environment,
-    directory: secretPath,
-    isPaused: !canDoReadRollback
-  });
+  const { data: snapshotCount, isLoading: isSnapshotCountLoading } =
+    useGetWsSnapshotCount({
+      workspaceId,
+      environment,
+      directory: secretPath,
+      isPaused: !canDoReadRollback,
+    });
 
   const noAccessSecretCount = Math.max(
     (page * perPage > totalCount ? totalCount % perPage : perPage) -
@@ -223,19 +245,21 @@ const SecretMainPageContent = () => {
       (folders?.length || 0) -
       (secrets?.length || 0) -
       (dynamicSecrets?.length || 0),
-    0
+    0,
   );
   const isNotEmpty = Boolean(
     secrets?.length ||
       folders?.length ||
       imports?.length ||
       dynamicSecrets?.length ||
-      noAccessSecretCount
+      noAccessSecretCount,
   );
 
   const handleSortToggle = () =>
     setOrderDirection((state) =>
-      state === OrderByDirection.ASC ? OrderByDirection.DESC : OrderByDirection.ASC
+      state === OrderByDirection.ASC
+        ? OrderByDirection.DESC
+        : OrderByDirection.ASC,
     );
 
   const handleEnvChange = (slug: string) => {
@@ -243,7 +267,7 @@ const SecretMainPageContent = () => {
     delete query.secretPath;
     router.push({
       pathname: router.pathname,
-      query
+      query,
     });
   };
 
@@ -256,7 +280,7 @@ const SecretMainPageContent = () => {
         else newTagFilter[tagSlug] = true;
         return { ...state, tags: newTagFilter };
       }),
-    []
+    [],
   );
 
   const handleToggleRowType = useCallback(
@@ -266,19 +290,23 @@ const SecretMainPageContent = () => {
           ...state,
           include: {
             ...state.include,
-            [rowType]: !state.include[rowType]
-          }
+            [rowType]: !state.include[rowType],
+          },
         };
       }),
-    []
+    [],
   );
 
   const handleSearchChange = useCallback(
-    (searchFilter: string) => setFilter((state) => ({ ...state, searchFilter })),
-    []
+    (searchFilter: string) =>
+      setFilter((state) => ({ ...state, searchFilter })),
+    [],
   );
 
-  const handleToggleVisibility = useCallback(() => setIsVisible((state) => !state), []);
+  const handleToggleVisibility = useCallback(
+    () => setIsVisible((state) => !state),
+    [],
+  );
 
   // snapshot functions
   const handleSelectSnapshot = useCallback((snapId: string) => {
@@ -302,7 +330,7 @@ const SecretMainPageContent = () => {
     if (router.query.searchFilter) {
       router.push({
         pathname: router.pathname,
-        query
+        query,
       });
     }
   }, [secretPath]);
@@ -311,7 +339,9 @@ const SecretMainPageContent = () => {
     if (!router.query.search && !router.query.tags) return;
 
     const queryTags = router.query.tags
-      ? (router.query.tags as string).split(",").filter((tag) => Boolean(tag.trim()))
+      ? (router.query.tags as string)
+          .split(",")
+          .filter((tag) => Boolean(tag.trim()))
       : [];
     const updatedTags: Record<string, boolean> = {};
     queryTags.forEach((tag) => {
@@ -322,14 +352,14 @@ const SecretMainPageContent = () => {
       ...prev,
       ...defaultFilterState,
       searchFilter: (router.query.search as string) ?? "",
-      tags: updatedTags
+      tags: updatedTags,
     }));
     setDebouncedSearchFilter(router.query.search as string);
     // this is a temp workaround until we fully transition state to query params,
     const { search, tags: qTags, ...query } = router.query;
     router.push({
       pathname: router.pathname,
-      query
+      query,
     });
   }, [router.query.search, router.query.tags]);
 
@@ -414,7 +444,7 @@ const SecretMainPageContent = () => {
               {isNotEmpty && (
                 <div
                   className={twMerge(
-                    "sticky top-0 flex border-b border-mineshaft-600 bg-mineshaft-800 font-medium"
+                    "sticky top-0 flex border-b border-mineshaft-600 bg-mineshaft-800 font-medium",
                   )}
                 >
                   <Tooltip
@@ -422,7 +452,9 @@ const SecretMainPageContent = () => {
                     content={
                       totalCount > 0
                         ? `${
-                            !allRowsSelectedOnPage.isChecked ? "Select" : "Unselect"
+                            !allRowsSelectedOnPage.isChecked
+                              ? "Select"
+                              : "Unselect"
                           } all secrets on page`
                         : ""
                     }
@@ -449,7 +481,11 @@ const SecretMainPageContent = () => {
                   >
                     Key
                     <FontAwesomeIcon
-                      icon={orderDirection === OrderByDirection.ASC ? faArrowDown : faArrowUp}
+                      icon={
+                        orderDirection === OrderByDirection.ASC
+                          ? faArrowDown
+                          : faArrowUp
+                      }
                       className="ml-2"
                     />
                   </div>
@@ -495,7 +531,9 @@ const SecretMainPageContent = () => {
                   isProtectedBranch={isProtectedBranch}
                 />
               )}
-              {canReadSecret && <SecretNoAccessListView count={noAccessSecretCount} />}
+              {canReadSecret && (
+                <SecretNoAccessListView count={noAccessSecretCount} />
+              )}
               {!canReadSecret &&
                 !canReadDynamicSecret &&
                 !canReadSecretImports &&
@@ -566,6 +604,6 @@ const SecretMainPageContent = () => {
 
 export const SecretMainPage = () => (
   <StoreProvider>
-    <SecretMainPageContent />
+    <ConsumerSecretMainPageContent />
   </StoreProvider>
 );
